@@ -1,0 +1,525 @@
+---
+title: "DM_HOME_CREDIT_RISK_EVALUATION"
+author: "YAASSH RAO"
+date: "11/2/2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading packages
+
+```{r cars}
+library(tidyverse)# metapackage with lots of helpful functions
+library(plotly)
+library(GGally)
+library(knitr)
+library(kableExtra)
+library(reshape)
+library(reshape)
+library(MLmetrics)
+library(caret)
+library(Hmisc)
+```
+
+## Loading data
+
+You can also embed plots, for example:
+
+```{r echo=FALSE}
+path <- "/Users/yaasshrao/Desktop/home credit risk default"
+setwd(path)
+
+train <- read.csv("application_train.csv")
+test <- read.csv("application_test.csv")
+
+dim(train)
+dim(test)
+
+glimpse(train[1:10, 1:10])
+glimpse(test[1:10, 1:10])
+```
+
+## Data Types
+```{r echo=FALSE}
+data_types <- function(frame) {
+  res <- lapply(frame, class)
+  res_frame <- data.frame(unlist(res))
+  barplot(table(res_frame), main="Data Types in Train data", col="steelblue", ylab="Number of Features")
+}
+data_types(train)
+
+```
+
+## NAs in both datasets
+```{r echo=FALSE}
+sum(is.na(train))/(nrow(train)*ncol(train)) 
+sum(is.na(test))/(nrow(test)*ncol(test)) 
+```
+### 22% of NA values in train dataset. Almost 22% values in test dataset. From this observation, we can say that there is almost same behaviour of data flow.
+
+# Missing value columns
+## Distribution of missing columns
+```{r echo=FALSE}
+nacols <- function(df) {
+    colnames(df)[unlist(lapply(df, function(x) anyNA(x)))]
+}
+cat('There are',length(nacols(train)),'columns with NA values.50% of columns are NA filled which disturbs the data quality')
+```
+
+## Top Missing Value Columns
+```{r echo=FALSE}
+missing_data <- as.data.frame(sort(sapply(train, function(x) sum(is.na(x))),decreasing = T))                                                   
+colnames(missing_data)[1] <- "Missing_values"
+missing_data$Percentage <- (missing_data$Missing_values/nrow(train))*100      
+missing_data$Variables <- rownames(missing_data)
+missing_data <- missing_data[c(3,1,2)] 
+rownames(missing_data)<-c()                                        
+head(missing_data,15)
+```
+
+## Visualizing the missing columns
+```{r}
+ggplot(missing_data[missing_data$Percentage >50,],aes(reorder(Variables,Percentage),Percentage,fill= Variables)) +
+  geom_bar(stat="identity") +theme_minimal() +
+ theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "none") +
+                                  coord_flip()+ylab("Percentage of Missing Values") +
+  xlab("Variables") + ggtitle("Top Missing Values-Variables")
+```
+
+# TARGET VARIABLE
+
+### TARGET = 1 - client with payment difficulties: he/she had late payment more than X days on at least one of the first Y installments of the loan
+
+### TARGET = 0 - all other cases
+
+## Checking for NA in TARGET
+```{r}
+sum(is.na(train$TARGET))
+```
+
+
+```{r}
+count_target<-train%>%group_by(target=TARGET)%>%summarise(count=n())
+colors <- c('rgb(211,94,96)', 'rgb(114,147,203)')#, 'rgb(144,103,167)', 'rgb(171,104,87)', 'rgb(114,147,203)')
+
+plot_ly(count_target, labels = ~target, values = ~count, type = 'pie',
+        textposition = 'inside',
+        textinfo = 'label+percent',
+        insidetextfont = list(color = '#FFFFFF'),
+        hoverinfo = 'text',
+        text = ~paste('$', target, ' billions'),
+        marker = list(colors = colors,
+                      line = list(color = '#FFFFFF', width = 1)),
+                      #The 'pull' attribute can also be used to create space between the sectors
+        showlegend = FALSE) %>%
+  layout(title = 'Target Distribution',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+```
+
+### Age
+```{r}
+age_df<-data.frame(target=train$TARGET,age=as.integer(train$DAYS_BIRTH/-365))
+summary(age_df$age)
+
+age_df$age_group<-cut(age_df$age,breaks=seq(20,70,by=5),right=TRUE)  
+age_df_interval<-age_df%>%group_by(age_group,target)%>%summarise(count=n(),count_percentage=n()/nrow(train)*100)
+age_df_interval
+
+# we find one value with target-0 and NA in group,so we remove it
+age_df_interval<-age_df_interval[-c(21),]
+
+plot_age_by_group <- ggplot() +
+    geom_bar(data=age_df_interval, aes(x=factor(age_group), y=count_percentage, fill=factor(target)),stat="identity", position="dodge")+
+     geom_text(data=age_df_interval,aes(x=age_group,y=count_percentage+0.5,label = paste0("",round(count_percentage,0)," %",sep=""),group=target), position=position_dodge(width=1),vjust=0,size=4,fontface = 'bold')+
+   labs(title="Percentage of Clients among different Age Group",x="Age Group",y="Count",fill='Target')+  
+    theme_bw()
+ggplotly(plot_age_by_group)
+
+# we see that there are more people of age between 25 to 60 who have more participation and parallely most of them failed to pay in time.Whereas people of age group less than 25 or more than 65 are less active in participation.
+
+```
+
+### Gender
+```{r}
+table(train$CODE_GENDER)
+
+gender_df<-train %>%
+  group_by(CODE_GENDER,TARGET) %>%
+  summarise(Count = n()/nrow(train)*100) %>%
+  arrange(desc(Count)) %>%
+  ungroup() %>%
+  mutate(CODE_GENDER = reorder(CODE_GENDER,Count)) %>%
+  mutate(TARGET = as.factor(TARGET))
+  
+plot_gender<- ggplot(data=gender_df,aes(x = CODE_GENDER,y = Count,fill=TARGET)) +
+  geom_bar(stat='identity', position=position_dodge(width=1)) +
+  geom_text(aes(x = CODE_GENDER, y = Count+2, label = paste0("",round(Count,0)," %",sep=""),group=TARGET),
+            position=position_dodge(width=1), size=4, colour = 'black',
+            fontface = 'bold') +
+  labs(x = 'Gender', 
+       y = 'Percentage', 
+       title = 'Percentage of clients - Gender') +
+    theme_bw()
+ggplotly(plot_gender)
+
+# It stays with an equal proportion of not paying in time for both gender.
+```
+
+### Income
+```{r}
+summary(train$AMT_INCOME_TOTAL)
+# Weak correlation, so not using this variable
+```
+
+### Income Type
+```{r}
+summary(train$NAME_INCOME_TYPE)
+# More employed people in data
+
+income_type<-train %>%
+  group_by(NAME_INCOME_TYPE,TARGET) %>%
+  summarise(Count = n()/nrow(train)*100) %>%
+  ungroup() %>%
+  mutate(NAME_INCOME_TYPE = reorder(NAME_INCOME_TYPE,Count)) %>%
+  mutate(TARGET = as.factor(TARGET))
+  
+plot_income_type<- ggplot(data=income_type,aes(x = NAME_INCOME_TYPE,y = Count,fill= TARGET))  +
+  geom_bar(stat='identity',position=position_dodge(width=1)) +
+  geom_text(aes(x = NAME_INCOME_TYPE, y = Count+2, label = paste0("",round(Count,0)," %",sep=""),group=TARGET),
+            position=position_dodge(width=1), size=4, colour = 'black',
+            fontface = 'bold') + 
+       labs(x = 'Income Type of Loan Applicant', 
+       y = 'Percentage', 
+       title = 'Income Type of Loan Applicant and Percentage') +
+    theme_bw()
+
+ggplotly(plot_income_type)
+
+# More number of employed people have an account in this bank
+```
+
+### Education
+```{r}
+summary(train$NAME_EDUCATION_TYPE)
+
+education_type<-train %>%
+  group_by(NAME_EDUCATION_TYPE,TARGET) %>%
+  summarise(Count = n()/nrow(train)*100) %>%
+  ungroup() %>%
+  mutate(NAME_EDUCATION_TYPE = reorder(NAME_EDUCATION_TYPE,Count)) %>%
+  mutate(TARGET = as.factor(TARGET))
+  
+plot_education_type<- ggplot(data=education_type,aes(x = NAME_EDUCATION_TYPE,y = Count,fill= TARGET))  +
+  geom_bar(stat='identity',position=position_dodge(width=1)) +
+  geom_text(aes(x = NAME_EDUCATION_TYPE, y = Count+2, label = paste0("",round(Count,0)," %",sep=""),group=TARGET),
+            position=position_dodge(width=1), size=4, colour = 'black',
+            fontface = 'bold') + 
+       labs(x = 'Education of Loan Applicant', 
+       y = 'Percentage', 
+       title = 'Education Type of Loan Applicant and Percentage') +
+    theme_bw()
+
+ggplotly(plot_education_type)
+```
+
+### Credit Amount of loan
+```{r}
+summary(train$AMT_CREDIT)
+
+credit_amt<-train %>%
+  filter(AMT_CREDIT < 2e6)
+
+plot_credit_amt<- ggplot(data=credit_amt,aes(x = AMT_CREDIT)) +
+  geom_histogram(bins = 30,fill="light green")+
+  labs(x= 'Amount Credit',y = 'Count', title = paste("Distribution of", ' Amount Credit ')) +
+  theme_bw()
+ggplotly(plot_credit_amt)
+```
+
+### Loan annuity
+```{r}
+summary(train$AMT_ANNUITY)
+
+annuity_amt<-train %>%
+   filter(AMT_ANNUITY < 5e4) %>%
+  ggplot(aes(x = AMT_ANNUITY)) +
+  geom_histogram(bins = 15,fill = "violet") +
+  labs(x= 'Annuity Amount',y = 'Count', title = paste("Distribution of", ' Annuity Amount ')) +
+  theme_bw()
+ggplotly(annuity_amt)
+```
+
+### Rating of region where client lives
+```{r}
+table(train$REGION_RATING_CLIENT)
+
+region_city<-train %>%
+  filter(!is.na(REGION_RATING_CLIENT)) %>%
+  group_by(REGION_RATING_CLIENT,TARGET) %>%
+  summarise(Count = n()) %>%
+  ungroup() %>%
+  mutate(REGION_RATING_CLIENT = reorder(REGION_RATING_CLIENT,Count)) %>%
+  mutate(TARGET = as.factor(TARGET))
+  
+ggplot(data = region_city, aes(x = "", y = Count, fill = REGION_RATING_CLIENT )) + 
+    geom_bar(stat = "identity", position = position_fill()) +
+    geom_text(aes(label = Count), position = position_fill(vjust = 0.5))+ 
+    coord_polar(theta = "y") +
+    ggtitle('Region Rating - Client Residence')+
+    facet_wrap(~ TARGET)  +
+    theme(axis.text.x=element_blank()) +
+    theme(
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        panel.border = element_blank(),
+        panel.grid=element_blank(),
+        axis.ticks = element_blank())+ theme(legend.position='bottom') +
+        guides(fill=guide_legend(title="Region Rating - Client Residence"))
+```
+
+# FEATURE ENGINEERING
+```{r}
+missing_data_train <- as.data.frame(sort(sapply(train, function(x) sum(is.na(x))),decreasing = T))                                                   
+colnames(missing_data_train)[1] <- "Missing_values"
+missing_data_train$Percentage <- (missing_data_train$Missing_values/nrow(train))*100      
+missing_data_train$Variables <- rownames(missing_data_train)
+                                                
+#Variables containing NAs less than 15% train dataset                                           
+missing_data_train<-subset(missing_data_train,missing_data_train$Percentage<15)                                           
+less_na_columns_train<-missing_data_train$Variables                                               
+less_na_columns_train
+
+```
+
+### Removing variables that are less correlated
+```{r}
+#Correlated Variables of train dataset    
+reg_train<- c('SK_ID_CURR','TARGET','EXT_SOURCE_1','EXT_SOURCE_2','EXT_SOURCE_3','DAYS_BIRTH','DAYS_EMPLOYED','REGION_RATING_CLIENT_W_CITY',
+               'REGION_RATING_CLIENT','NAME_INCOME_TYPE','NAME_EDUCATION_TYPE',
+                  'CODE_GENDER','NAME_INCOME_TYPE','DAYS_ID_PUBLISH','DAYS_REGISTRATION',
+                'DAYS_LAST_PHONE_CHANGE','REGION_POPULATION_RELATIVE','AMT_GOODS_PRICE','HOUR_APPR_PROCESS_START')                                          
+ 
+#Making union of Correlated variables and less NA columns                                                
+reg_and_na_train<-union(reg_train, less_na_columns_train)  
+final_train_df<-train[,reg_and_na_train] #This train dataset will go for furthur process
+     
+missing_data_test <- as.data.frame(sort(sapply(test, function(x) sum(is.na(x))),decreasing = T))                                                   
+colnames(missing_data_test)[1] <- "Missing_values"
+missing_data_test$Percentage <- (missing_data_test$Missing_values/nrow(test))*100      
+missing_data_test$Variables <- rownames(missing_data_test)
+
+#Variables containing NAs less than 15% from test dataset 
+missing_data_test<-subset(missing_data_test,missing_data_test$Percentage<15)                                           
+less_na_columns_test<-missing_data_test$Variables                                               
+less_na_columns_test
+```
+```{r}
+#Correlated Variables of test dataset                                           
+reg_test<- c('SK_ID_CURR','EXT_SOURCE_1','EXT_SOURCE_2','EXT_SOURCE_3','DAYS_BIRTH','DAYS_EMPLOYED','REGION_RATING_CLIENT_W_CITY',
+               'REGION_RATING_CLIENT','NAME_INCOME_TYPE','NAME_EDUCATION_TYPE',
+                  'CODE_GENDER','NAME_INCOME_TYPE','DAYS_ID_PUBLISH','DAYS_REGISTRATION',
+                'DAYS_LAST_PHONE_CHANGE','REGION_POPULATION_RELATIVE','AMT_GOODS_PRICE','HOUR_APPR_PROCESS_START') 
+                                               
+#Making union of Correlated variables and less NA columns                                                   
+reg_and_na_test<-union(reg_test, less_na_columns_test)  
+final_test_df<-test[,reg_and_na_test] #This test dataset will go for furthur process
+                                                                                                
+train_df<-final_train_df
+test_df<-final_test_df
+```
+
+### Imputed NA in important variables, with median. Created polynomial features( with external source variables)
+```{r}
+train_df$age<-as.integer(train_df$DAYS_BIRTH/-365)
+train_df$EXT_SOURCE_1 <- with(train_df, impute(EXT_SOURCE_1, median))
+train_df$EXT_SOURCE_2 <- with(train_df, impute(EXT_SOURCE_2, median))
+
+#Polynomial features
+train_poly<-data.frame(train_df$EXT_SOURCE_1,train_df$EXT_SOURCE_2,train_df$EXT_SOURCE_3)
+train_pol_df<-data.frame(do.call(poly, c(lapply(1:3, function(x) train_poly[,x]), degree=3, raw=T)))
+train_df<-cbind(train_pol_df,train_df)
+
+test_df$age<-as.integer(test_df$DAYS_BIRTH/-365)
+test_df$EXT_SOURCE_1 <- with(test_df, impute(EXT_SOURCE_1, mean))
+test_df$EXT_SOURCE_2 <- with(test_df, impute(EXT_SOURCE_2, mean))
+
+# Polynomial features
+test_poly<-data.frame(test_df$EXT_SOURCE_1,test_df$EXT_SOURCE_2,test_df$EXT_SOURCE_3)
+test_pol_df<-data.frame(do.call(poly, c(lapply(1:3, function(x) test_poly[,x]), degree=3, raw=T)))
+test_df<-cbind(test_pol_df,test_df)
+```
+
+# MODELING
+```{r}
+# Preprocessing
+full <- bind_rows(train_df,test_df)
+Target <- train_df$TARGET
+Id <- test_df$SK_ID_CURR
+full[,c('SK_ID_CURR','TARGET')] <- NULL
+chr <- full[,sapply(full, is.character)]
+num <- full[,sapply(full, is.numeric)]
+chr[is.na(chr)] <- "Not Available"
+fac <- chr %>% 
+  lapply(as.factor) %>% 
+  as_data_frame()
+full <- bind_cols(fac, num)
+rm(chr, fac, num)
+full[is.na(full)] <- 0
+num <- train_df[, sapply(train_df,is.numeric)]
+rm(train_df, test_df)
+train_df <- full[1:length(Target),]
+test_df <-full[(length(Target)+1):nrow(full),]
+
+# Cross Validation
+set.seed(123)
+inTrain <- createDataPartition(Target, p=.9, list = F)
+tr <- train_df[inTrain,]
+va <- train_df[-inTrain,]
+tr_ta <- Target[inTrain]
+va_ta <- Target[-inTrain]
+```
+
+```{r}
+
+# Converting all variables to numeric
+application_train2 <- train %>%
+  select(-TARGET,-EXT_SOURCE_1, -EXT_SOURCE_2, -EXT_SOURCE_3)
+
+features <- colnames(application_train2)
+
+for (f in features) {
+  if ((class(application_train2[[f]])=="factor") || (class(application_train2[[f]])=="character")) {
+    levels <- unique(application_train2[[f]])
+    application_train2[[f]] <- as.numeric(factor(application_train2[[f]], levels=levels))
+  }
+}
+
+application_train2$TARGET = NULL
+application_train2$TARGET = as.factor(train$TARGET)
+levels(application_train2$TARGET) = make.names(unique(application_train2$TARGET))
+
+
+application_test2 = test 
+
+features <- colnames(application_test2)
+
+for (f in features) {
+  if ((class(application_test2[[f]])=="factor") || (class(application_test2[[f]])=="character")) {
+    levels <- unique(application_test2[[f]])
+    application_test2[[f]] <- as.numeric(factor(application_test2[[f]], levels=levels))
+  }
+}
+```
+
+# Logistic Regression
+```{r}
+train$TARGET <- as.factor(train$TARGET)
+
+# Only using clean columns
+data <- train[c(2:21)]
+summary(data)
+#Note - TARGET has an incidence rate of .0807 - just over 8% of the records are 1
+
+indexes = sample(1:nrow(data), size=0.2*nrow(data))
+test = data[indexes,]
+dim(test)
+train = train[-indexes,]
+
+# Look at a logistic regression using all the remaining columns to see what is significant
+model <- glm(TARGET~., data=data, family="binomial")
+summary(model)
+
+
+# estimate variable importance
+
+#library(caret)
+importance_LR <- data.frame(varImp(model, scale=TRUE))
+importance_LR
+
+
+#No formulaic approach - I just looked at the statistically significant variables with the highest importance
+# Use those variables to calculate a confusion matrix
+#Use 8.07% as cutoff - this is population average
+
+
+
+model_LR <- glm(TARGET~ CODE_GENDER + AMT_CREDIT + AMT_GOODS_PRICE + DAYS_EMPLOYED, data=data, family="binomial")
+summary(model_LR)
+prediction_LR <- predict(model_LR, data, type = "response")
+summary(prediction_LR)
+
+
+
+
+##Now make predictions on the testing dataset
+
+prediction_LR <- predict(model_LR, test, type = "response")
+summary(prediction_LR)
+
+
+```
+# XGBoost
+```{r}
+formula = TARGET ~ .
+
+fitControl <- trainControl(method="none",number = 5,  classProbs = TRUE, summaryFunction = twoClassSummary)
+
+xgbGrid <- expand.grid(nrounds = 100,
+                       max_depth = 7,
+                       eta = .05,
+                       gamma = 0,
+                       colsample_bytree = .8,
+                       min_child_weight = 1,
+                       subsample = 1)
+
+set.seed(13)
+
+XGBModel = train(formula, data = application_train2,
+                        method = "xgbTree",trControl = fitControl,
+                        tuneGrid = xgbGrid,na.action = na.pass,metric="ROC"
+                       )
+
+XGBModel
+```
+
+# Variable Importance
+```{r}
+importance_XGBM = varImp(XGBModel)
+
+varImportance <- data.frame(Variables = row.names(importance_XGBM[[1]]), 
+                            Importance = round(importance_XGBM[[1]]$Overall,2))
+
+# Create a rank variable based on importance
+rankImportance <- varImportance %>%
+  mutate(Rank = paste0('#',dense_rank(desc(Importance)))) %>%
+  head(10)
+
+rankImportancefull = rankImportance
+
+ggplot(rankImportance, aes(x = reorder(Variables, Importance), 
+                           y = Importance)) +
+  geom_bar(stat='identity',colour="white") +
+  geom_text(aes(x = Variables, y = 1, label = Rank),
+            hjust=0, vjust=.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+  labs(x = 'Variables', title = 'Relative Variable Importance') +
+  coord_flip() + 
+  theme_bw()
+```
+
+#  PREDICTION
+```{r}
+predictions = predict(XGBModel,application_test2,na.action=na.pass,type="prob")
+head(predictions)
+
+
+```
+
+# AUC Curves
+```{r}
+confusionMatrix(solution, train[,2])
+```
