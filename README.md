@@ -9,3 +9,4 @@ While Home Credit is currently using various statistical and machine learning me
 
 # Data : https://www.kaggle.com/c/home-credit-default-risk/data
 
+# Video Explanation : https://youtu.be/BpEuAZCqaRI
