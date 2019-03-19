@@ -48,3 +48,4 @@ In this section, we focus on the distribution of the data to understand how it i
 segments of the population the data focuses on.
 
 Here is the distribution of the income variable:
+
