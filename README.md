@@ -41,3 +41,10 @@ The input variables include binary variables for gender, car and realty ownershi
 income, annuity, occupation type, marital status etc.
 
 The model is a binary classification supervised learning model.
+
+## Descriptive Analysis
+
+In this section, we focus on the distribution of the data to understand how it is structured and what
+segments of the population the data focuses on.
+
+Here is the distribution of the income variable:
