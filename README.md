@@ -54,4 +54,4 @@ Even though the lowest income recorded is $25,650, the 1st quartile includes a l
 ## Exploratory Data Analysis
 
 ### How does the occupation play a role in determining default ?
-![](Percentage%20Defaulters against Types of occupation.png)
+![](Percentage%20Defaulters%20against%20Types%20of%20occupation.png)
