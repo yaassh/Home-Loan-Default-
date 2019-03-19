@@ -47,5 +47,11 @@ The model is a binary classification supervised learning model.
 In this section, we focus on the distribution of the data to understand how it is structured and what
 segments of the population the data focuses on.
 
-Here is the distribution of the income variable:
+The median income level recorded for the data is much higher than we expected (147k USD) when compared to the nation’s median annual household income (50k USD).
+ 
+Even though the lowest income recorded is $25,650, the 1st quartile includes a larger amount ($112,500) which indicates the data consists of a large number of high-income earners.
 
+## Exploratory Data Analysis
+
+### How does the occupation play a role in determining default ?
+![alt text](https://raw.githubusercontent.com/yaassh/Home-Loan-Default-/Percentage Defaulters against Types of occupation.png)
