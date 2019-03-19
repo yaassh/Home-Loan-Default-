@@ -105,7 +105,7 @@ types of sparsity patterns in the data.
 the data points are of equal weights (using quantile sketch algorithm). However, they are not equipped to handle weighted data. XGBoost has a distributed weighted quantile sketch algorithm to effectively handle weighted data.
 
 The trained XGBoost model automatically calculates feature importance on our predictive modeling problem.
-<img src="Relative%20Attribute%20Significance.png" alt="Relative_Attribute_significance">
+<img src="Relative%20Attribute%20Significance.png" alt="Relative_Attribute_significance" width=50 height=100>
 
 In the variable importance plot above, we can see that features are named automatically according to their index in the input array. Thus, we can conclude that DAYS_BIRTH has the highest importance relative to all other variables within the training data, whereas CODE_GENDER has the lowest importance.
 
