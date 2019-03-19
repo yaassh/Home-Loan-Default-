@@ -66,9 +66,9 @@ To further illustrate how having more dependents (not just spouses) puts more fi
 
 The visualization below explores income levels against the probability of default. The general assumption that having higher income leads to lesser chances of default holds true here. Surprisingly though, the highest rates of default don’t happen in the lowest bracket of income but people earning much more than the median household income (50,000 USD for a household of 4 people) are much more likely to default. Additionally, people earning much higher annual incomes don’t have an insignificant default rate either.
 
-<img src="Income%20Levels%20v:s%20Probability%20of%20Default.png">
+<img src="Income%20Levels%20v:s%20Probability%20of%20Default.png" alt= Income_Levels_v/s_Probability_of_default>
 
-![](Default%20Rate%20v:s%20Assets%20Owned.png)
+<img src="Default%20Rate%20v:s%20Assets%20Owned.png" alt=Default_rate_v/s_Assets_Owned>
 
 The visualization above compares default rates with assets that people own.
 People owning a car (depreciating asset) are less likely to default than those who don’t. This can be partially contributed to the competitive market for auto financing which often finances such purchases for very little interest.
