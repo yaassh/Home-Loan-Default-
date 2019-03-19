@@ -54,4 +54,4 @@ Even though the lowest income recorded is $25,650, the 1st quartile includes a l
 ## Exploratory Data Analysis
 
 ### How does the occupation play a role in determining default ?
-![alt text](https://raw.githubusercontent.com/yaassh/Home-Loan-Default-/Percentage Defaulters against Types of occupation.png)
+![alt text](https://raw.githubusercontent.com/yaassh/Home-Loan-Default-/Percentage_Defaulters_against_Types_of_occupation.png)
