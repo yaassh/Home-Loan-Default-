@@ -69,3 +69,6 @@ The visualization below explores income levels against the probability of defaul
 ![](Income%20Levels%20v:s%20Probability%20of%20Default.png)
 
 ![](Default%20Rate%20v:s%20Assets%20Owned.png)
+
+The visualization above compares default rates with assets that people own.
+People owning a car (depreciating asset) are less likely to default than those who don’t. This can be partially contributed to the competitive market for auto financing which often finances such purchases for very little interest.
