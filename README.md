@@ -55,3 +55,10 @@ Even though the lowest income recorded is $25,650, the 1st quartile includes a l
 
 ### How does the occupation play a role in determining default ?
 ![](Percentage%20Defaulters%20against%20Types%20of%20occupation.png)
+
+The graph above shows how blue collar employees are more at a risk to default.
+
+This visualization explores the person’s relationship status against their chances of default. Married couples are much more likely to default than all categories of people without dependents combined together.
+
+To further illustrate how having more dependents (not just spouses) puts more financial burden is the comparison of number of kids in a household and the number of cases where they defaulted. Households having more than or equal to 6 kids have a much higher probability of default.
+![](Rate%20of%20default%20vs%20number%20of%20underage%20dependents%20.png)
