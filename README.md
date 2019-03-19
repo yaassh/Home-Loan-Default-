@@ -15,8 +15,11 @@ While Home Credit is currently using various statistical and machine learning me
 
 ### A few points about the data:
 ● The training data contains 307K observations, which are people applied for and received loans.
+
 ● The “TARGET” column identifies whether or not the person defaulted (0 v/s 1).
+
 ● The remaining 121 features describe various attributes about the person, loan, and application.
+
 ● There are several additional data sets (bureau.csv, previous_application.csv). These auxiliary
 files contain data that is one-to-many relationship, which would require aggregation (a feature engineering method) and considerably more work for the unknown benefit. Hence, we have chosen to leave analysis of variables included in these additional datasets.
 
